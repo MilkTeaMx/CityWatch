@@ -146,6 +146,9 @@ const ReportScreen = ({ navigation }) => {
                 {<Image source={image ? { uri: image } : defaultImage} style={styles.image}/>}
               </TouchableOpacity>
               
+              <TouchableOpacity style={styles.smallButton} onPress={generateText}>
+                <Text style={styles.smallButtonText}> Generate Description Automatically</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
