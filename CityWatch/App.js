@@ -14,7 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import NewsScreen from './screens/LoginScreen';
-import HomeScreen from './screens/LoginScreen';
+import HomeScreen from './screens/HomeScreen';
 import ReportScreen from './screens/ReportScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
