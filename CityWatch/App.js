@@ -13,13 +13,10 @@ import { Ionicons } from '@expo/vector-icons';
 
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
-import HomeScreen from './screens/LoginScreen';
-import ReportScreen from './screens/LoginScreen';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import NewsScreen from './screens/LoginScreen';
-
-
-
+import HomeScreen from './screens/LoginScreen';
+import ReportScreen from './screens/ReportScreen';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -40,6 +37,7 @@ const screenOptions = {
 
 
 function Tabs( ) {
+
   
   return (
     <Tab.Navigator screenOptions={screenOptions}>
@@ -48,7 +46,7 @@ function Tabs( ) {
           component={HomeScreen} 
           options={{
             tabBarIcon: ({focused})=>{
-              return ( 
+              return (
                 <View style={{alignItems: "center", justifyContent: "center"}}> 
                   <Entypo name="home" size={24} color={focused ? "#16247d": "#111"} />
                   <Text style={{fonSize: 12, color: "#16247d"}}>Home</Text>
