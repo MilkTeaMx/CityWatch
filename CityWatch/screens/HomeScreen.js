@@ -59,22 +59,6 @@ const HomeScreen = ({ navigation }) => {
   43714,43714,10262,5693,3701,1311
   `;
 
-  const parseCrimeString = (content, setCrimeData) => {
-    Papa.parse(content, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => {
-        const valuesArray = [];
-        result.data.forEach((d) => {
-          valuesArray.push(Object.values(d));
-        });
-        setCrimeData(valuesArray);
-      },
-      error: (error) => {
-        console.error('Error parsing CSV:', error);
-      },
-    });
-  };
 
   useEffect(() => {
     
@@ -123,13 +107,6 @@ const HomeScreen = ({ navigation }) => {
     }));
     setEvent(eventsWithUrls);
   };
-
-  useEffect(() => {
-    if (newEvent.length > 0) {
-      fetchImageUrls(newEvent);
-    }
-  }, [newEvent]);
-
   useEffect(() => {
     if (crimeWtd.length > 0) {
       setSelectedTime(crimeWtd);
@@ -180,14 +157,7 @@ const HomeScreen = ({ navigation }) => {
       case 'wtd':
         setSelectedTime(crimeWtd);
         break;
-      case '28d':
-        setSelectedTime(crime28d);
-        break;
-      case 'ytd':
-        setSelectedTime(crimeYtd);
-        break;
-      default:
-        break;
+   
     }
   };
 
@@ -223,9 +193,7 @@ const HomeScreen = ({ navigation }) => {
             style={styles.picker}
             onValueChange={(selectedValue) => handleValueChange(selectedValue)}
           >
-            <Picker.Item label="Week to Date" value="wtd" />
-            <Picker.Item label="Past Month" value="28d" />
-            <Picker.Item label="Year to Date" value="ytd" />
+          
           </Picker>
           <Menu style={styles.menuStyles}>
             <MenuTrigger>
