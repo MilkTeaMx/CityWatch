@@ -13,10 +13,13 @@ import { Ionicons } from '@expo/vector-icons';
 
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
-import NewsScreen from './screens/LoginScreen';
 import HomeScreen from './screens/HomeScreen';
 import ReportScreen from './screens/ReportScreen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import NewsScreen from './screens/NewsScreen';
+
+import useFirestoreListener from './hooks/fireStoreListener';
+
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -37,7 +40,7 @@ const screenOptions = {
 
 
 function Tabs( ) {
-
+  useFirestoreListener();
   
   return (
     <Tab.Navigator screenOptions={screenOptions}>

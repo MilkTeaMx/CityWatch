@@ -12,6 +12,7 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { getDownloadURL, ref } from "firebase/storage";
 import { useSharedValue } from "react-native-reanimated";
 import { TouchableOpacity } from "react-native-gesture-handler";
+
 import * as Location from 'expo-location';
 import personLocationIcon from '../assets/personLocationIcon.png'
 import WebView from "react-native-webview";
@@ -151,11 +152,11 @@ const HomeScreen = ({ navigation }) => {
       setSelectedWeights(weights);
 
       if (selectedTime === crimeWtd) {
-        setHeatMapRadius(50);
-      } else if (selectedTime === crime28d) {
-        setHeatMapRadius(120);
-      } else {
         setHeatMapRadius(150);
+      } else if (selectedTime === crime28d) {
+        setHeatMapRadius(190);
+      } else {
+        setHeatMapRadius(215);
       }
     }
   }, [selectedTime]);
@@ -197,6 +198,7 @@ const HomeScreen = ({ navigation }) => {
     carouselRef.current?.scrollTo({ index, animated: true });
   };
 
+
   const getUserLocation = async () => {
     try {
       //GETTING THE LATLNG
@@ -217,6 +219,8 @@ const HomeScreen = ({ navigation }) => {
     }
   }
   
+
+
   return (
     <MenuProvider>
       <SafeAreaView style={styles.container}>
@@ -229,41 +233,26 @@ const HomeScreen = ({ navigation }) => {
             <Picker.Item label="Past Month" value="28d" />
             <Picker.Item label="Year to Date" value="ytd" />
           </Picker>
-          <View style={styles.menuContainer}>
-            <Menu style={styles.menuStyles}>
-              <MenuTrigger>
-                <Icon
-                  name={"dots-three-vertical"}
-                  type={"entypo"}
-                  size={20}
-                  color="black" // Color of the icon
-                />
-              </MenuTrigger>
-              <MenuOptions>
-                <MenuOption onSelect={handleSignOut} text="Sign Out" />
-              </MenuOptions>
-            </Menu>
-          </View>
+          <Menu style={styles.menuStyles}>
+            <MenuTrigger>
+              <Icon
+                name={"dots-three-vertical"}
+                type={"entypo"}
+                size={20}
+                color="black" // Color of the icon
+              />
+            </MenuTrigger>
+            <MenuOptions>
+              <MenuOption onSelect={handleSignOut} text="Sign Out" />
+            </MenuOptions>
+          </Menu>
         </View>
-        <View style={StyleSheet.absoluteFillObject}>
+        <View style={styles.mapContainer}>
           <MapView
             style={styles.map}
             initialRegion={initialRegion}
           >
-            <Heatmap points={points} radius={heatMapRadius} style={{ opacity: 0.4 }} />
-
-            {userLocation && (
-              <Marker
-                coordinate={{ latitude: userLocation.latitude, longitude: userLocation.longitude }}
-                title="Your Location"
-              >
-                <Image 
-                    source={personLocationIcon}
-                    style={{ width: 42, height: 42 }} // Adjust the width and height as needed
-                  />
-              </Marker>
-              )}
-
+            <Heatmap points={points} radius={heatMapRadius} />
             {newEvent.map((event, index) => (
               <Marker
                 key={`${event.id}-${currentSlideIndex}`} // Use a combination of unique id and currentSlideIndex as the key
@@ -271,18 +260,14 @@ const HomeScreen = ({ navigation }) => {
                 pinColor={index === currentSlideIndex ? 'red' : 'blue'} // Keep the color consistent
                 onPress={() => handleMarkerPress(index)}
               >
-                <Callout style={styles.calloutImage}>
-                  {event.imageUrl ? (
-                    <>
-                    <Text>
-                      <WebView source={{ uri: event.imageUrl }} style={styles.calloutImage} />
-                    </Text>
-                    </>
-                   
-                  ) : (
-                    <ActivityIndicator size="small" color="#0000ff" />
-                  )}
-                  <Text style={styles.itemText}>{`Latitude and Longitude: ${event.imageUrl}`}</Text>
+                <Callout style={styles.image}>
+                                {event.imageUrl ? (
+                  <Text>
+                    <WebView source={{ uri: event.imageUrl }} style={styles.image} />
+                  </Text>
+                ) : (
+                  <ActivityIndicator size="large" color="#0000ff" />
+                )}
                 </Callout>
               </Marker>
             ))}
@@ -291,25 +276,20 @@ const HomeScreen = ({ navigation }) => {
         <View style={styles.carouselContainer}>
           <Carousel
             ref={carouselRef}
-            width={width * 0.9} // 90% of screen width
+            width={width}
             height={width / 2}
             data={newEvent}
             onSnapToItem={(index) => {
               setCurrentSlideIndex(index);
             }}
             renderItem={({ item }) => (
-              <View style={styles.carouselItem}>
-                <Text style={styles.carouselText}>{`Latitude: ${item.coords[0]}, Longitude: ${item.coords[1]}`}</Text>
-                <Text style={styles.carouselText}>{`Address: ${item.address}`}</Text>
-                <Text style={styles.carouselText}>{`Time: ${new Date(item.time.seconds * 1000).toLocaleString()}`}</Text>
-                <Text style={styles.carouselText}>{`Description: ${item.description}`}</Text>
+              <View style={styles.itemContainer}>
+                <Text style={styles.itemText}>{`Latitude and Longitude: ${item.coords}`}</Text>
+                <Text style={styles.itemText}>{`Address: ${item.address}`}</Text>
+                <Text style={styles.itemText}>{`Time: ${new Date(item.time.seconds * 1000).toLocaleString()}`}</Text>
+                <Text style={styles.itemText}>{`Description: ${item.description}`}</Text>
               </View>
             )}
-            mode="parallax"
-            modeConfig={{
-              parallaxScrollingScale: 0.9,
-              parallaxScrollingOffset: 50,
-            }}
           />
         </View>
       </SafeAreaView>
@@ -325,98 +305,55 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    marginVertical: 50,
     paddingHorizontal: 16,
     backgroundColor: '#fff', // Add background color to header
-    zIndex: 2, // Ensure the header stays above the map
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
-    elevation: 5,
-    marginTop: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)'
-  },
-  menuContainer: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-    marginLeft: 'auto',
+    zIndex: 1, // Ensure the header stays above the map
   },
   menuStyles: {
-    padding: 10,
-    backgroundColor: '#fff', // Add background color to menu
-    borderRadius: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
-    elevation: 5,
+    flexDirection: "row",
+    justifyContent: "flex-end", // This aligns items to the right
   },
   mapContainer: {
-    ...StyleSheet.absoluteFillObject,
+    flex: 1, // Take the remaining space after the header
   },
   map: {
     ...StyleSheet.absoluteFillObject,
   },
   picker: {
     height: 50,
-    width: 250,
-    backgroundColor: 'rgba(255, 255, 255, 1)'
+    width: 150,
   },
   carouselContainer: {
     justifyContent: "center",
     alignItems: "center",
+    width: '100%',
     position: 'absolute',
-    bottom: 80, // Move the carousel higher
-    alignSelf: 'center',
-    width: '90%',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)', // Slightly transparent background
-    borderRadius: 10,
-    padding: 10,
-    zIndex: 2, // Ensure carousel is above the map
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
-    elevation: 5,
+    bottom: 0,
+    backgroundColor: '#fff',
   },
   carouselItem: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1.5,
-    borderRadius: 10,
-    borderColor: "black",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.8,
-    shadowRadius: 2,
-    elevation: 5,
-    backgroundColor: '#fff',
-    padding: 10,
+    borderWidth: 1,
   },
   carouselText: {
-    fontSize: 18,
+    fontSize: 30,
     textAlign: "center",
-    color: "#333",
-    marginBottom: 5,
-    fontFamily: "Arial",
-    fontStyle: "italic",
   },
-  image: {
-    width: 300,
-    height: 300,
-    marginBottom: 10,
-  },
-  calloutImage: {
-    width: 100,
-    height: 100,
+  itemContainer: {
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 10,
   },
   itemText: {
     fontSize: 16,
     textAlign: "center",
-    color: "#333",
+  },
+  image: {
+    width: 200,
+    height: 200,
   },
 });
 
