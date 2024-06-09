@@ -7,14 +7,14 @@ import { Icon } from "react-native-elements";
 import MapView, { Heatmap, Marker, Callout } from 'react-native-maps';
 import Papa from 'papaparse';
 import { Picker } from '@react-native-picker/picker';
-
+import Carousel from "react-native-reanimated-carousel";
 import { collection, onSnapshot } from 'firebase/firestore';
 import { getDownloadURL, ref } from "firebase/storage";
+import { useSharedValue } from "react-native-reanimated";
 import { TouchableOpacity } from "react-native-gesture-handler";
-
 import * as Location from 'expo-location';
 import personLocationIcon from '../assets/personLocationIcon.png'
-import pulseGif from '../assets/hotspot_pulse.gif'
+import WebView from "react-native-webview";
 
 const { width } = Dimensions.get("window");
 
@@ -30,7 +30,8 @@ const HomeScreen = ({ navigation }) => {
   const [heatMapRadius, setHeatMapRadius] = useState(25);
   const [newEvent, setEvent] = useState([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-
+  const progress = useSharedValue(0);
+  const carouselRef = useRef(null);
 
   const db = FIRESTORE_DB;
   const storage = FIREBASE_STORAGE;
@@ -59,6 +60,22 @@ const HomeScreen = ({ navigation }) => {
   43714,43714,10262,5693,3701,1311
   `;
 
+  const parseCrimeString = (content, setCrimeData) => {
+    Papa.parse(content, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        const valuesArray = [];
+        result.data.forEach((d) => {
+          valuesArray.push(Object.values(d));
+        });
+        setCrimeData(valuesArray);
+      },
+      error: (error) => {
+        console.error('Error parsing CSV:', error);
+      },
+    });
+  };
 
   useEffect(() => {
     
@@ -107,6 +124,13 @@ const HomeScreen = ({ navigation }) => {
     }));
     setEvent(eventsWithUrls);
   };
+
+  useEffect(() => {
+    if (newEvent.length > 0) {
+      fetchImageUrls(newEvent);
+    }
+  }, [newEvent]);
+
   useEffect(() => {
     if (crimeWtd.length > 0) {
       setSelectedTime(crimeWtd);
@@ -127,11 +151,11 @@ const HomeScreen = ({ navigation }) => {
       setSelectedWeights(weights);
 
       if (selectedTime === crimeWtd) {
-        setHeatMapRadius(25);
-      } else if (selectedTime === crime28d) {
         setHeatMapRadius(50);
+      } else if (selectedTime === crime28d) {
+        setHeatMapRadius(120);
       } else {
-        setHeatMapRadius(100);
+        setHeatMapRadius(150);
       }
     }
   }, [selectedTime]);
@@ -157,11 +181,21 @@ const HomeScreen = ({ navigation }) => {
       case 'wtd':
         setSelectedTime(crimeWtd);
         break;
-   
+      case '28d':
+        setSelectedTime(crime28d);
+        break;
+      case 'ytd':
+        setSelectedTime(crimeYtd);
+        break;
+      default:
+        break;
     }
   };
 
-
+  const handleMarkerPress = (index) => {
+    setCurrentSlideIndex(index);
+    carouselRef.current?.scrollTo({ index, animated: true });
+  };
 
   const getUserLocation = async () => {
     try {
@@ -183,8 +217,6 @@ const HomeScreen = ({ navigation }) => {
     }
   }
   
-
-
   return (
     <MenuProvider>
       <SafeAreaView style={styles.container}>
@@ -193,34 +225,37 @@ const HomeScreen = ({ navigation }) => {
             style={styles.picker}
             onValueChange={(selectedValue) => handleValueChange(selectedValue)}
           >
-          
+            <Picker.Item label="Week to Date" value="wtd" />
+            <Picker.Item label="Past Month" value="28d" />
+            <Picker.Item label="Year to Date" value="ytd" />
           </Picker>
-          <Menu style={styles.menuStyles}>
-            <MenuTrigger>
-              <Icon
-                name={"dots-three-vertical"}
-                type={"entypo"}
-                size={20}
-                color="black" // Color of the icon
-              />
-            </MenuTrigger>
-            <MenuOptions>
-              <MenuOption onSelect={handleSignOut} text="Sign Out" />
-            </MenuOptions>
-          </Menu>
+          <View style={styles.menuContainer}>
+            <Menu style={styles.menuStyles}>
+              <MenuTrigger>
+                <Icon
+                  name={"dots-three-vertical"}
+                  type={"entypo"}
+                  size={20}
+                  color="black" // Color of the icon
+                />
+              </MenuTrigger>
+              <MenuOptions>
+                <MenuOption onSelect={handleSignOut} text="Sign Out" />
+              </MenuOptions>
+            </Menu>
+          </View>
         </View>
-        <View style={styles.mapContainer}>
+        <View style={StyleSheet.absoluteFillObject}>
           <MapView
             style={styles.map}
             initialRegion={initialRegion}
           >
-            <Heatmap points={points} radius={heatMapRadius} />
+            <Heatmap points={points} radius={heatMapRadius} style={{ opacity: 0.4 }} />
 
             {userLocation && (
               <Marker
-                coordinate={{ latitude:  40.6683, longitude: -73.92 }}
+                coordinate={{ latitude: userLocation.latitude, longitude: userLocation.longitude }}
                 title="Your Location"
-              // Change the color of the marker if needed
               >
                 <Image 
                     source={personLocationIcon}
@@ -233,18 +268,15 @@ const HomeScreen = ({ navigation }) => {
               <Marker
                 key={`${event.id}-${currentSlideIndex}`} // Use a combination of unique id and currentSlideIndex as the key
                 coordinate={{ latitude: event.coords[0], longitude: event.coords[1] }}
-        
-                onPress={() => {}}
+                pinColor={index === currentSlideIndex ? 'red' : 'blue'} // Keep the color consistent
+                onPress={() => handleMarkerPress(index)}
               >
-                <Image 
-                    source={pulseGif}
-                    style={{ width: 42, height: 42 }} // Adjust the width and height as needed
-                  />
-                <Callout>
+                <Callout style={styles.calloutImage}>
                   {event.imageUrl ? (
                     <>
-                     <Image source={{ uri: event.imageUrl }} style={styles.calloutImage} />
-                     <Text> {event.description}</Text>
+                    <Text>
+                      <WebView source={{ uri: event.imageUrl }} style={styles.calloutImage} />
+                    </Text>
                     </>
                    
                   ) : (
@@ -256,7 +288,30 @@ const HomeScreen = ({ navigation }) => {
             ))}
           </MapView>
         </View>
-      
+        <View style={styles.carouselContainer}>
+          <Carousel
+            ref={carouselRef}
+            width={width * 0.9} // 90% of screen width
+            height={width / 2}
+            data={newEvent}
+            onSnapToItem={(index) => {
+              setCurrentSlideIndex(index);
+            }}
+            renderItem={({ item }) => (
+              <View style={styles.carouselItem}>
+                <Text style={styles.carouselText}>{`Latitude: ${item.coords[0]}, Longitude: ${item.coords[1]}`}</Text>
+                <Text style={styles.carouselText}>{`Address: ${item.address}`}</Text>
+                <Text style={styles.carouselText}>{`Time: ${new Date(item.time.seconds * 1000).toLocaleString()}`}</Text>
+                <Text style={styles.carouselText}>{`Description: ${item.description}`}</Text>
+              </View>
+            )}
+            mode="parallax"
+            modeConfig={{
+              parallaxScrollingScale: 0.9,
+              parallaxScrollingOffset: 50,
+            }}
+          />
+        </View>
       </SafeAreaView>
     </MenuProvider>
   );
@@ -270,51 +325,84 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginVertical: 50,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     backgroundColor: '#fff', // Add background color to header
-    zIndex: 1, // Ensure the header stays above the map
+    zIndex: 2, // Ensure the header stays above the map
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
+    marginTop: 60,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)'
+  },
+  menuContainer: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginLeft: 'auto',
   },
   menuStyles: {
-    flexDirection: "row",
-    justifyContent: "flex-end", // This aligns items to the right
+    padding: 10,
+    backgroundColor: '#fff', // Add background color to menu
+    borderRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
   },
   mapContainer: {
-    flex: 1, // Take the remaining space after the header
+    ...StyleSheet.absoluteFillObject,
   },
   map: {
     ...StyleSheet.absoluteFillObject,
   },
   picker: {
     height: 50,
-    width: 150,
+    width: 250,
+    backgroundColor: 'rgba(255, 255, 255, 1)'
   },
   carouselContainer: {
     justifyContent: "center",
     alignItems: "center",
-    width: '100%',
     position: 'absolute',
-    bottom: 0,
-    backgroundColor: '#fff',
+    bottom: 80, // Move the carousel higher
+    alignSelf: 'center',
+    width: '90%',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', // Slightly transparent background
+    borderRadius: 10,
+    padding: 10,
+    zIndex: 2, // Ensure carousel is above the map
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
   },
   carouselItem: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-  },
-  carouselText: {
-    fontSize: 30,
-    textAlign: "center",
-  },
-  itemContainer: {
-    justifyContent: "center",
-    alignItems: "center",
+    borderWidth: 1.5,
+    borderRadius: 10,
+    borderColor: "black",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.8,
+    shadowRadius: 2,
+    elevation: 5,
+    backgroundColor: '#fff',
     padding: 10,
   },
-  itemText: {
-    fontSize: 16,
+  carouselText: {
+    fontSize: 18,
     textAlign: "center",
+    color: "#333",
+    marginBottom: 5,
+    fontFamily: "Arial",
+    fontStyle: "italic",
   },
   image: {
     width: 300,
@@ -324,6 +412,11 @@ const styles = StyleSheet.create({
   calloutImage: {
     width: 100,
     height: 100,
+  },
+  itemText: {
+    fontSize: 16,
+    textAlign: "center",
+    color: "#333",
   },
 });
 
